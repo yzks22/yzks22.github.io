@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WINS FINDER — 最寄りウインズ検索</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00c853;
+    --dark-green: #007c34;
+    --bg: #0a0f0a;
+    --surface: #111811;
+    --card: #162016;
+    --border: #1e2e1e;
+    --text: #e8f5e8;
+    --muted: #6a8a6a;
+    --accent: #ffe600;
+    --red: #ff3d3d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Racing stripe background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 60px,
+        rgba(0,200,83,0.015) 60px,
+        rgba(0,200,83,0.015) 61px
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.4em;
+    color: var(--green);
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 10vw, 5.5rem);
+    line-height: 0.9;
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, #fff 0%, var(--green) 60%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    margin-top: 0.8rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* JRA badge */
+  .jra-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    margin-top: 1rem;
+  }
+
+  .jra-badge::before {
+    content: '🏇';
+  }
+
+  /* Search button */
+  .search-btn {
+    display: block;
+    width: 100%;
+    padding: 1.2rem;
+    background: linear-gradient(135deg, var(--dark-green), var(--green));
+    border: none;
+    border-radius: 0.5rem;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #000;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+    box-shadow: 0 4px 24px rgba(0,200,83,0.3);
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,200,83,0.45);
+    filter: brightness(1.1);
+  }
+
+  .search-btn:active { transform: translateY(0); }
+
+  .search-btn:disabled {
+    background: var(--border);
+    color: var(--muted);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+    filter: none;
+  }
+
+  /* Status */
+  .status {
+    text-align: center;
+    padding: 1.2rem;
+    font-size: 0.88rem;
+    color: var(--muted);
+    animation: fadeUp 0.3s ease both;
+  }
+
+  .status.error {
+    color: var(--red);
+    background: rgba(255,61,61,0.07);
+    border: 1px solid rgba(255,61,61,0.2);
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  /* Results */
+  #results {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .result-header {
+    font-size: 0.78rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.5rem;
+  }
+
+  .wins-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.4rem 1.5rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .wins-card:hover {
+    border-color: var(--green);
+    transform: translateX(3px);
+    box-shadow: -4px 0 20px rgba(0,200,83,0.15);
+  }
+
+  .wins-card.top1 {
+    border-color: var(--green);
+    background: linear-gradient(135deg, #162016, #0f2315);
+    box-shadow: 0 0 30px rgba(0,200,83,0.12);
+  }
+
+  .rank {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--muted);
+    width: 2rem;
+    text-align: center;
+  }
+
+  .wins-card.top1 .rank {
+    color: var(--accent);
+  }
+
+  .wins-info { min-width: 0; }
+
+  .wins-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wins-card.top1 .wins-name {
+    color: #fff;
+  }
+
+  .wins-address {
+    font-size: 0.78rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .wins-distance {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--green);
+  }
+
+  .wins-card.top1 .wins-distance {
+    color: var(--accent);
+  }
+
+  .wins-dist-unit {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.7rem;
+    color: var(--muted);
+    display: block;
+    text-align: right;
+    margin-top: -0.2rem;
+  }
+
+  .nearest-badge {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0,200,83,0.12);
+    border: 1px solid rgba(0,200,83,0.3);
+    border-radius: 2rem;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.7rem;
+    color: var(--green);
+    width: fit-content;
+    letter-spacing: 0.05em;
+  }
+
+  .map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--green);
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+  }
+
+  .map-link:hover { opacity: 1; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    margin-top: 4rem;
+    font-size: 0.7rem;
+    color: var(--border);
+    letter-spacing: 0.08em;
+  }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 1em; height: 1em;
+    border: 2px solid var(--muted);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 0.5rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .card-enter {
+    animation: fadeUp 0.4s ease both;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <span class="logo-label">JRA FACILITY LOCATOR</span>
+    <h1>WINS<br>FINDER</h1>
+    <p class="subtitle">今いる場所から一番近いウインズを探す</p>
+    <div class="jra-badge">JRA場外馬券売場 全国対応</div>
+  </header>
+
+  <button class="search-btn" id="searchBtn" onclick="findNearest()">
+    📍 現在地から最寄りウインズを検索
+  </button>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <footer>
+    ※ 距離は直線距離です。実際の移動距離とは異なります。<br>
+    ※ 施設情報は2024年時点のものです。営業日・時間はJRA公式サイトでご確認ください。
+  </footer>
+</div>
+
+<script>
+// ============================
+//  ウインズ全施設データ
+// ============================
+const WINS_LIST = [
+  // 北海道
+  { name: "ウインズ札幌",       address: "北海道札幌市中央区北4条西5丁目",         lat: 43.0686, lng: 141.3510 },
+  // 宮城
+  { name: "ウインズ仙台",       address: "宮城県仙台市青葉区中央4-6-1",            lat: 38.2682, lng: 140.8694 },
+  // 埼玉
+  { name: "ウインズ浦和",       address: "埼玉県さいたま市浦和区高砂1-2-1",        lat: 35.8606, lng: 139.6456 },
+  // 千葉
+  { name: "ウインズ津田沼",     address: "千葉県習志野市津田沼1-11-1",             lat: 35.6982, lng: 140.0173 },
+  // 東京
+  { name: "ウインズ銀座",       address: "東京都中央区銀座7-3-13",                 lat: 35.6693, lng: 139.7638 },
+  { name: "ウインズ後楽園",     address: "東京都文京区後楽1-3-61",                 lat: 35.7055, lng: 139.7530 },
+  { name: "ウインズ新宿",       address: "東京都新宿区新宿3-27-10",               lat: 35.6910, lng: 139.7012 },
+  { name: "ウインズ渋谷",       address: "東京都渋谷区道玄坂1-12-1",              lat: 35.6585, lng: 139.7006 },
+  { name: "ウインズ立川",       address: "東京都立川市曙町2-8-18",                lat: 35.6985, lng: 139.4117 },
+  { name: "ウインズ梅田",       address: "大阪府大阪市北区梅田1-12-39",            lat: 34.7023, lng: 135.4959 },
+  // 神奈川
+  { name: "ウインズ横浜",       address: "神奈川県横浜市西区高島2-19-12",          lat: 35.4660, lng: 139.6231 },
+  // 静岡
+  { name: "ウインズ浜松",       address: "静岡県浜松市中区砂山町356-2",            lat: 34.7108, lng: 137.7261 },
+  // 愛知
+  { name: "ウインズ名古屋",     address: "愛知県名古屋市中区栄3-35-29",            lat: 35.1640, lng: 136.9065 },
+  // 大阪
+  { name: "ウインズ難波",       address: "大阪府大阪市浪速区難波中1-12-26",        lat: 34.6618, lng: 135.4998 },
+  // 兵庫
+  { name: "ウインズ神戸",       address: "兵庫県神戸市中央区三宮町1-9-1",          lat: 34.6937, lng: 135.1947 },
+  // 京都
+  { name: "ウインズ京都",       address: "京都府京都市下京区東塩小路町607",         lat: 34.9859, lng: 135.7589 },
+  // 広島
+  { name: "ウインズ広島",       address: "広島県広島市中区基町6-27",               lat: 34.3966, lng: 132.4596 },
+  // 福岡
+  { name: "ウインズ博多",       address: "福岡県福岡市博多区博多駅前2-1-1",        lat: 33.5897, lng: 130.4208 },
+  // 熊本
+  { name: "ウインズ熊本",       address: "熊本県熊本市中央区新市街11-10",          lat: 32.7998, lng: 130.7019 },
+];
+
+// ============================
+//  距離計算（Haversine公式）
+// ============================
+function calcDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDist(km) {
+  return km < 1
+    ? (km * 1000).toFixed(0) + ' m'
+    : km.toFixed(1) + ' km';
+}
+
+// ============================
+//  メイン処理
+// ============================
+function findNearest() {
+  const btn = document.getElementById('searchBtn');
+  const status = document.getElementById('status');
+  const results = document.getElementById('results');
+
+  btn.disabled = true;
+  btn.textContent = '取得中...';
+  results.innerHTML = '';
+  status.className = 'status';
+  status.innerHTML = '<span class="spinner"></span>現在地を取得しています…';
+
+  if (!navigator.geolocation) {
+    showError('このブラウザは位置情報に対応していません。');
+    btn.disabled = false;
+    btn.textContent = '📍 現在地から最寄りウインズを検索';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const userLat = pos.coords.latitude;
+      const userLng = pos.coords.longitude;
+
+      // 距離計算してソート
+      const sorted = WINS_LIST
+        .map(w => ({ ...w, dist: calcDistance(userLat, userLng, w.lat, w.lng) }))
+        .sort((a, b) => a.dist - b.dist);
+
+      status.innerHTML = '';
+      renderResults(sorted.slice(0, 5), userLat, userLng);
+
+      btn.disabled = false;
+      btn.textContent = '🔄 再検索';
+    },
+    (err) => {
+      let msg = '位置情報の取得に失敗しました。';
+      if (err.code === 1) msg = '位置情報の使用が拒否されました。ブラウザの設定から許可してください。';
+      if (err.code === 2) msg = '位置情報を取得できませんでした。';
+      if (err.code === 3) msg = 'タイムアウトしました。もう一度お試しください。';
+      showError(msg);
+      btn.disabled = false;
+      btn.textContent = '📍 現在地から最寄りウインズを検索';
+    },
+    { timeout: 10000, enableHighAccuracy: true }
+  );
+}
+
+function showError(msg) {
+  const status = document.getElementById('status');
+  status.className = 'status error';
+  status.textContent = '⚠️ ' + msg;
+}
+
+function renderResults(list, userLat, userLng) {
+  const results = document.getElementById('results');
+  results.innerHTML = '<div class="result-header">近い順 TOP ' + list.length + '</div>';
+
+  list.forEach((w, i) => {
+    const card = document.createElement('div');
+    card.className = 'wins-card card-enter' + (i === 0 ? ' top1' : '');
+    card.style.animationDelay = (i * 0.08) + 's';
+
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(w.name + ' ' + w.address)}`;
+
+    card.innerHTML = `
+      ${i === 0 ? '<div class="nearest-badge">⭐ 最寄りウインズ</div>' : ''}
+      <div class="rank">${i + 1}</div>
+      <div class="wins-info">
+        <div class="wins-name">${w.name}</div>
+        <div class="wins-address">${w.address}</div>
+        <a class="map-link" href="${googleMapsUrl}" target="_blank" rel="noopener">
+          🗺 Googleマップで開く
+        </a>
+      </div>
+      <div>
+        <div class="wins-distance">${formatDist(w.dist)}</div>
+        <span class="wins-dist-unit">直線距離</span>
+      </div>
+    `;
+
+    results.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>
