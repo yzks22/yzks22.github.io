@@ -3,8 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex,nofollow">
-  
 <title>WINS FINDER — 最寄りウインズ検索</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
@@ -298,8 +296,27 @@
     text-align: center;
     margin-top: 4rem;
     font-size: 0.7rem;
-    color: var(--border);
+    color: var(--muted);
     letter-spacing: 0.08em;
+  }
+
+  /* Info box */
+  .info-box {
+    margin-top: 2.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.2rem 1.4rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .info-box p + p { margin-top: 0.5rem; }
+
+  .info-box strong {
+    color: var(--text);
+    font-weight: 700;
   }
 
   /* Animations */
@@ -346,6 +363,13 @@
 
   <div id="status"></div>
   <div id="results"></div>
+
+  <div class="info-box">
+    <p>🔒 <strong>プライバシーについて</strong><br>
+    位置情報はあなたの端末の中だけで処理されます。サーバーへの送信や外部への共有は一切行っていません。</p>
+    <p>⚠️ <strong>非公式サービスです</strong><br>
+    このアプリはJRAおよびウインズとは無関係の非公式サービスです。施設情報の正確性は保証できません。</p>
+  </div>
 
   <footer>
     ※ 距離は直線距離です。実際の移動距離とは異なります。<br>
